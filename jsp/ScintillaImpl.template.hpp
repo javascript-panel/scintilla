@@ -6,10 +6,10 @@
 using namespace Scintilla;
 
 template <typename T>
-class CScintillaImpl : public CWindowImpl<T, CWindow, CControlWinTraits>
+class ScintillaImpl : public CWindowImpl<T, CWindow, CControlWinTraits>
 {
 public:
-	DECLARE_WND_SUPERCLASS2(L"CScintillaImpl", CScintillaImpl, CWindow::GetWndClassName())
+	DECLARE_WND_SUPERCLASS2(L"ScintillaImpl", ScintillaImpl, CWindow::GetWndClassName())
 
 REPLACEME
 
