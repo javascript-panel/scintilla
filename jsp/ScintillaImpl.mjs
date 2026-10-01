@@ -16,6 +16,7 @@ const typeAliases = {
 	'formatrangefull': 'RangeToFormatFull*',
 	'keymod': 'int',
 	'line': 'Line',
+	'pixels': 'Pixels',
 	'pointer': 'void*',
 	'position': 'Position',
 	'string': 'const char*',
@@ -25,17 +26,18 @@ const typeAliases = {
 }
 
 const basicTypes = [
-	"bool",
-	"char*",
-	"Colour",
-	"ColourAlpha",
-	"const char*",
-	"int",
-	"intptr_t",
-	"Line",
-	"Position",
-	"void",
-	"void*",
+	'bool',
+	'char*',
+	'Colour',
+	'ColourAlpha',
+	'const char*',
+	'int',
+	'intptr_t',
+	'Line',
+	'Pixels',
+	'Position',
+	'void',
+	'void*',
 ]
 
 function format(name, type, ptr) {
@@ -80,7 +82,7 @@ function build_call(name, typeWp, nameWp, typeLp, nameLp, ret) {
 
 	if (ret == 'void*')
 		return `return reinterpret_cast<void*>(${call});`
-	else if (!basicTypes.includes(ret) || ret == 'int' || ret == 'Colour' || ret == 'ColourAlpha')
+	else if (!basicTypes.includes(ret) || ret == 'int' || ret == 'Colour' || ret == 'ColourAlpha' || ret == 'Pixels')
 		return `return static_cast<${ret}>(${call});`
 	else if (ret != 'void')
 		return `return ${call};`
