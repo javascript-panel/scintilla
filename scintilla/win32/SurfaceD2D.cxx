@@ -17,6 +17,7 @@
 
 #include <stdexcept>
 #include <utility>
+#include <compare>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -336,7 +337,7 @@ class SurfaceD2D : public Surface, public ISetRenderingParams {
 	void Clear() noexcept;
 	void SetFontQuality(FontQuality extraFontFlag);
 	HRESULT GetBitmap(ID2D1Bitmap **ppBitmap);
-	void SetDeviceScaleFactor(const ID2D1RenderTarget *const pD2D1RenderTarget) noexcept;
+	void SetDeviceScaleFactor(const ID2D1RenderTarget *pD2D1RenderTarget) noexcept;
 
 public:
 	SurfaceD2D() noexcept = default;
@@ -1124,7 +1125,7 @@ void ScreenLineLayout::FillTextLayoutFormats(const IScreenLine *screenLine, IDWr
 std::wstring ScreenLineLayout::ReplaceRepresentation(std::string_view text) {
 	const TextWide wideText(text, CpUtf8);
 	std::wstring ws(wideText.buffer, wideText.tlen);
-	std::replace(ws.begin(), ws.end(), L'\t', L'X');
+	std::ranges::replace(ws, L'\t', L'X');
 	return ws;
 }
 

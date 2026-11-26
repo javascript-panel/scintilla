@@ -4,10 +4,12 @@
  **/
 // Copyright 1998-2010 by Neil Hodgson <neilh@scintilla.org>
 // The License.txt file describes the conditions under which this software may be distributed.
+#include <cstdint>
 #include <cassert>
 #include <cstring>
 
 #include <string>
+#include <string_view>
 #include <algorithm>
 
 #include "ILexer.h"
@@ -19,6 +21,33 @@
 using namespace Lexilla;
 
 namespace Lexilla {
+
+ LexAccessor::LexAccessor(Scintilla::IDocument *pAccess_) :
+	pAccess(pAccess_), startPos(PTRDIFF_MAX), endPos(0),
+	codePage(pAccess->CodePage()),
+	encodingType(EncodingType::eightBit),
+	lenDoc(pAccess->Length()),
+	validLen(0),
+	startSeg(0), startPosStyling(0),
+	documentVersion(pAccess->Version()) {
+	// Prevent warnings by static analyzers about uninitialized buf and styleBuf.
+	buf[0] = 0;
+	styleBuf[0] = 0;
+	switch (codePage) {
+	case 65001:
+		encodingType = EncodingType::unicode;
+		break;
+	case 932:
+	case 936:
+	case 949:
+	case 950:
+	case 1361:
+		encodingType = EncodingType::dbcs;
+		break;
+	default:
+		break;
+	}
+}
 
 bool LexAccessor::Match(Sci_Position pos, std::string_view sv) {
 	for (unsigned int i = 0; i < sv.size(); i++) {
@@ -83,6 +112,37 @@ std::string LexAccessor::GetRangeLowered(Sci_PositionU startPos_, Sci_PositionU 
 	return s;
 }
 
+void LexAccessor::GetRange(Sci_PositionU startPos_, Sci_PositionU endPos_, std::string &s) const {
+	assert(startPos_ <= endPos_);
+	endPos_ = std::min(endPos_, static_cast<Sci_PositionU>(lenDoc));
+	const Sci_PositionU len = endPos_ - startPos_;
+	s.resize(len, '\0');
+	GetRange(startPos_, endPos_, s.data(), len + 1);
+}
+
+void LexAccessor::GetRangeLowered(Sci_PositionU startPos_, Sci_PositionU endPos_, std::string &s) const {
+	assert(startPos_ <= endPos_);
+	endPos_ = std::min(endPos_, static_cast<Sci_PositionU>(lenDoc));
+	const Sci_PositionU len = endPos_ - startPos_;
+	s.resize(len, '\0');
+	GetRangeLowered(startPos_, endPos_, s.data(), len + 1);
+}
+
+std::string_view LexAccessor::RangeView(Sci_PositionU startPos_, Sci_PositionU endPos_) {
+	constexpr Sci_PositionU maxViewLength = bufferSize - slopSize;
+	const Sci_PositionU uLenDoc = lenDoc;
+	if ((startPos_ > uLenDoc) || (endPos_ < startPos_)) {
+		// Return empty view with valid start
+		return {buf, 0};
+	}
+	endPos_ = std::min(endPos_, uLenDoc);
+	const Sci_PositionU len = std::min(endPos_ - startPos_, maxViewLength);
+	if ((startPos_ < static_cast<Sci_PositionU>(startPos)) || ((startPos_ + len) >= static_cast<Sci_PositionU>(endPos))) {
+		Fill(startPos_);
+	}
+	return { buf + startPos_ - startPos, len };
+}
+
 void LexAccessor::SetLevelIfDifferent(Sci_Position line, int level) {
 	if (level != pAccess->GetLevel(line)) {
 		pAccess->SetLevel(line, level);
@@ -94,7 +154,7 @@ int FoldLevelFlags(int levelLine, int levelNext, bool white, bool headerPermitte
 	if (white) {
 		flags |= SC_FOLDLEVELWHITEFLAG;
 	}
-	if ((levelLine < levelNext) && (headerPermitted)) {
+	if ((levelLine < levelNext) && headerPermitted) {
 		flags |= SC_FOLDLEVELHEADERFLAG;
 	}
 	return flags;

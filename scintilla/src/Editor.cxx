@@ -15,6 +15,7 @@
 
 #include <stdexcept>
 #include <utility>
+#include <compare>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -1587,7 +1588,7 @@ bool Editor::WrapBlock(Surface *surface, Sci::Line lineToWrap, Sci::Line lineToW
 	std::mutex mutexRetrieve;
 
 	RunThreads(threads,
-		[=, &surface, &nextIndex, &linesAfterWrap, &mutexRetrieve]() {
+		[=, this, &surface, &nextIndex, &linesAfterWrap, &mutexRetrieve]() {
 			// llTemporary is reused for non-significant lines, avoiding allocation costs.
 			std::shared_ptr<LineLayout> llTemporary = std::make_shared<LineLayout>(-1, lengthCommon);
 			while (true) {
@@ -2062,7 +2063,7 @@ void Editor::ChangeSize() {
 }
 
 // Return the new position with no virtual space
-SelectionPosition Editor::RealizeVirtualSpace(const SelectionPosition &position) {
+SelectionPosition Editor::RealizeVirtualSpace(const SelectionPosition position) {
 	if (position.VirtualSpace() == 0) {
 		return position;
 	}
@@ -2104,7 +2105,7 @@ void Editor::InsertCharacter(std::string_view sv, CharacterSource charSource) {
 			selPtrs.push_back(&sel.Range(r));
 		}
 		// Order selections by position in document.
-		std::sort(selPtrs.begin(), selPtrs.end(),
+		std::ranges::sort(selPtrs,
 			[](const SelectionRange *a, const SelectionRange *b) noexcept {return *a < *b;});
 
 		// Loop in reverse to avoid disturbing positions of selections yet to be processed.
@@ -4499,7 +4500,7 @@ void Editor::CopySelectionRange(SelectionText *ss, bool allowLineCopy) {
 		std::string text;
 		std::vector<SelectionRange> rangesInOrder = sel.RangesCopy();
 		if (sel.selType == Selection::SelTypes::rectangle)
-			std::sort(rangesInOrder.begin(), rangesInOrder.end());
+			std::ranges::sort(rangesInOrder);
 		const std::string_view separator = (sel.selType == Selection::SelTypes::rectangle) ? pdoc->EOLString() : copySeparator;
 		for (size_t part = 0; part < rangesInOrder.size(); part++) {
 			text.append(RangeText(rangesInOrder[part].Start().Position(), rangesInOrder[part].End().Position()));
@@ -4579,7 +4580,7 @@ void Editor::DropAt(SelectionPosition position, std::string_view value, bool mov
 	const bool positionOnEdgeOfSelection =
 	    (position == SelectionStart()) || (position == SelectionEnd());
 
-	if ((inDragDrop != DragDrop::dragging) || !(positionWasInSelection) ||
+	if ((inDragDrop != DragDrop::dragging) || !positionWasInSelection ||
 	        (positionOnEdgeOfSelection && !moving)) {
 
 		const SelectionPosition selStart = SelectionStart();
@@ -5102,7 +5103,7 @@ void Editor::ButtonMoveWithModifiers(Point pt, unsigned int, KeyMod modifiers) {
 	if (HaveMouseCapture()) {
 
 		// Slow down autoscrolling/selection
-		autoScrollTimer.ticksToWait -= timer.tickSize;
+		autoScrollTimer.ticksToWait -= Timer::tickSize;
 		if (autoScrollTimer.ticksToWait > 0)
 			return;
 		autoScrollTimer.ticksToWait = autoScrollDelay;
@@ -6261,7 +6262,7 @@ sptr_t Editor::StringResult(sptr_t lParam, const char *val) noexcept {
 
 sptr_t Editor::BytesResult(sptr_t lParam, const unsigned char *val, size_t len) noexcept {
 	// No NUL termination: len is number of valid/displayed bytes
-	if ((lParam) && (len > 0)) {
+	if (lParam && (len > 0)) {
 		char *ptr = CharPtrFromSPtr(lParam);
 		if (val)
 			memcpy(ptr, val, len);
@@ -7804,7 +7805,7 @@ sptr_t Editor::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 		return vs.ElementColour(Element::CaretLineBack) ? 1 : 0;
 	case Message::SetCaretLineVisible:
 		if (wParam) {
-			if (!vs.elementColours.count(Element::CaretLineBack)) {
+			if (!vs.elementColours.contains(Element::CaretLineBack)) {
 				// Yellow default
 				vs.elementColours[Element::CaretLineBack] = ColourRGBA(maximumByte, maximumByte, 0);
 				InvalidateStyleRedraw();

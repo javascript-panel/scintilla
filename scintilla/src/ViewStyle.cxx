@@ -13,6 +13,7 @@
 
 #include <stdexcept>
 #include <utility>
+#include <compare>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -64,7 +65,7 @@ bool MarginStyle::ShowsFolding() const noexcept {
 
 void FontRealised::Realise(Surface &surface, int zoomLevel, Technology technology, const FontSpecification &fs, const char *localeName) {
 	PLATFORM_ASSERT(fs.fontName);
-	// If negative zoomLevel, ensure sizeZoomed at least minimum positive size 
+	// If negative zoomLevel, ensure sizeZoomed at least minimum positive size
 	measurements.sizeZoomed = std::max(fs.size + (zoomLevel * FontSizeMultiplier), FontSizeMultiplier);
 
 	const float deviceHeight = static_cast<float>(surface.DeviceHeightFont(measurements.sizeZoomed));
@@ -92,8 +93,8 @@ void FontRealised::Realise(Surface &surface, int zoomLevel, Technology technolog
 		std::array<XYPOSITION, allASCIIGraphic.length()> positions {};
 		surface.MeasureWidthsUTF8(font.get(), allASCIIGraphic, positions.data());
 		std::adjacent_difference(positions.begin(), positions.end(), positions.begin());
-		const XYPOSITION maxWidth = *std::max_element(positions.begin(), positions.end());
-		const XYPOSITION minWidth = *std::min_element(positions.begin(), positions.end());
+		const XYPOSITION maxWidth = *std::ranges::max_element(positions);
+		const XYPOSITION minWidth = *std::ranges::min_element(positions);
 		const XYPOSITION variance = maxWidth - minWidth;
 		constexpr XYPOSITION monospaceWidthEpsilon = 0.000001;	// May need tweaking if monospace fonts vary more
 		const XYPOSITION scaledVariance = monospaceWidthEpsilon * minWidth;
@@ -406,10 +407,10 @@ void ViewStyle::Refresh(Surface &surface, int tabInChars) {
 		style.Copy(fr->font, fr->measurements);
 	}
 
-	indicatorsDynamic = std::any_of(indicators.cbegin(), indicators.cend(),
+	indicatorsDynamic = std::ranges::any_of(indicators,
 		[](const Indicator &indicator) noexcept { return indicator.IsDynamic(); });
 
-	indicatorsSetFore = std::any_of(indicators.cbegin(), indicators.cend(),
+	indicatorsSetFore = std::ranges::any_of(indicators,
 		[](const Indicator &indicator) noexcept { return indicator.OverridesTextFore(); });
 
 	maxAscent = 1;
@@ -423,10 +424,10 @@ void ViewStyle::Refresh(Surface &surface, int tabInChars) {
 	constexpr int overlapFraction = 10;	// Allow up to a tenth of a line overlap
 	lineOverlap = std::min(std::max(lineHeight / overlapFraction, 2), lineHeight);
 
-	someStylesProtected = std::any_of(styles.cbegin(), styles.cend(),
+	someStylesProtected = std::ranges::any_of(styles,
 		[](const Style &style) noexcept { return style.IsProtected(); });
 
-	someStylesForceCase = std::any_of(styles.cbegin(), styles.cend(),
+	someStylesForceCase = std::ranges::any_of(styles,
 		[](const Style &style) noexcept { return style.caseForce != Style::CaseForce::mixed; });
 
 	aveCharWidth = styles[StyleDefault].aveCharWidth;
@@ -610,7 +611,7 @@ ColourRGBA ViewStyle::WrapColour() const {
 void ViewStyle::AddMultiEdge(int column, ColourRGBA colour) {
 	const EdgeProperties edgeNew(column, colour);
 	theMultiEdge.insert(
-		std::upper_bound(theMultiEdge.begin(), theMultiEdge.end(), edgeNew,
+		std::ranges::upper_bound(theMultiEdge, edgeNew,
 			[](const EdgeProperties &a, const EdgeProperties &b) noexcept {
 				return a.column < b.column;
 			}),
@@ -642,7 +643,7 @@ ColourRGBA ViewStyle::ElementColourForced(Element element) const {
 }
 
 bool ViewStyle::ElementAllowsTranslucent(Element element) const {
-	return elementAllowsTranslucent.count(element) > 0;
+	return elementAllowsTranslucent.contains(element);
 }
 
 bool ViewStyle::ResetElement(Element element) {

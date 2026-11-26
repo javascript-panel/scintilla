@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include <stdexcept>
+#include <compare>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -356,7 +357,7 @@ void LineMarker::Draw(Surface *surface, const PRectangle &rcWhole, const Font *f
 		return;
 	}
 
-	if ((markType >= MarkerSymbol::VLine) && markType <= (MarkerSymbol::CircleMinusConnected)) {
+	if ((markType >= MarkerSymbol::VLine) && (markType <= MarkerSymbol::CircleMinusConnected)) {
 		DrawFoldingMark(surface, rcWhole, part);
 		return;
 	}

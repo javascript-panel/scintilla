@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <new>
 #include <utility>
+#include <compare>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -1561,7 +1562,7 @@ sptr_t ScintillaWin::HandleCompositionInline(uptr_t, sptr_t lParam) {
 		// when selecting other candidate item, previous item will be replaced with current one.
 		// After candidate item been added, it's looks like been full selected, it's better to keep caret
 		// at end of "selection" (end of input) instead of jump to beginning of input ("selection").
-		const bool onlyTarget = std::all_of(imeIndicator.begin(), imeIndicator.end(), [](int i) noexcept {
+		const bool onlyTarget = std::ranges::all_of(imeIndicator, [](int i) noexcept {
 			return i == IndicatorTarget;
 		});
 		if (!onlyTarget) {

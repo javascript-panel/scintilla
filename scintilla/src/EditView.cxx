@@ -16,6 +16,7 @@
 
 #include <stdexcept>
 #include <utility>
+#include <compare>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -336,6 +337,9 @@ void EditView::CalculateSingles(const EditModel &model, Surface *surface, const 
 }
 
 std::shared_ptr<LineLayout> EditView::RetrieveLineLayout(Sci::Line lineNumber, const EditModel &model) {
+	if (lineNumber < 0) {
+		return {};
+	}
 	const Sci::Position posLineStart = model.pdoc->LineStart(lineNumber);
 	const Sci::Position posLineEnd = model.pdoc->LineStart(lineNumber + 1);
 	PLATFORM_ASSERT(posLineEnd >= posLineStart);
@@ -926,7 +930,7 @@ ColourRGBA TextBackground(const EditModel &model, const ViewStyle &vsDraw, const
 // Draw inverted text in a filled rectangle but omit the 4 corner pixels so appears rounded.
 void DrawTextBlob(Surface *surface, const ViewStyle &vsDraw, PRectangle rcSegment,
 	std::string_view text, ColourRGBA textBack, ColourRGBA textFore, bool fillBackground) {
-	if (rcSegment.Empty())
+	if (rcSegment.Empty() || (rcSegment.Width() < epsilon))
 		return;
 	if (fillBackground) {
 		surface->FillRectangleAligned(rcSegment, Fill(textBack));
